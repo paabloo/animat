@@ -11,20 +11,19 @@ const Canvas = (props: { [x: string]: any; draw: any }) => {
         // @ts-ignore
         const context = canvas.getContext('2d')
         let frameCount = 0
-        let animationFrameId: NodeJS.Timeout
+        let animationFrameId: number;
 
         const render = () => {
-            frameCount++
+            frameCount++;
             draw(context, frameCount)
-            animationFrameId = setTimeout(render, 20);
+            animationFrameId = window.requestAnimationFrame(render);
         }
-        render()
+        render();
 
         return () => {
-            // window.cancelAnimationFrame(animationFrameId)
-            clearTimeout(animationFrameId);
-        }
-    }, [draw])
+            window.cancelAnimationFrame(animationFrameId);
+        };
+    }, [draw]);
 
     return <canvas ref={canvasRef} {...rest} style={{ height: rest.height, width: rest.width }} />
 }
