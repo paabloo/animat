@@ -5,48 +5,13 @@ import Canvas from "./Canvas/Canvas";
 import settings from './settings';
 import { Ball } from './Ball';
 
-// export type Context = { clearRect: (arg0: number, arg1: number, arg2: any, arg3: any) => void; canvas: { width: any; height: any; }; fillStyle: string; beginPath: () => void; arc: (arg0: number, arg1: number, arg2: number, arg3: number, arg4: number) => void; fill: () => void; };
-
 console.log(settings);
 // @ts-ignore
 window.v = Victor;
 
 export type Context = CanvasRenderingContext2D;
 
-// interface Ball {
-//     id: number,
-//     x: number,
-//     y: number,
-//     r: number,
-//     s: number,
-//     e: number,
-//     fillStyle: string,
-//     speedVector: Victor,
-// }
-
-// function rectCircleColliding(circle: any, rect: any, collideInside: boolean) {
-//     // compute a center-to-center vector
-//     const half = { x: rect.w/2, y: rect.h/2 };
-//     const center = {
-//         x: circle.x - (rect.x+half.x),
-//         y: circle.y - (rect.y+half.y)};
-//
-//     // check circle position inside the rectangle quadrant
-//     const side = {
-//         x: Math.abs (center.x) - half.x,
-//         y: Math.abs (center.y) - half.y};
-//     if (side.x >  circle.r || side.y >  circle.r) // outside
-//         return false;
-//     if (side.x < -circle.r && side.y < -circle.r) // inside
-//         return collideInside;
-//     if (side.x < 0 || side.y < 0) // intersects side or corner
-//         return true;
-//
-//     // circle is near the corner
-//     return side.x*side.x + side.y*side.y  < circle.r*circle.r;
-// }
-
-function bounceFromBall(balls: Ball[]): { bounce: boolean, distance: number, newVector: Victor } {
+function detectCollision(balls: Ball[]): void {
     balls.forEach(ball => ball.setCollision(false));
 
     let obj1;
@@ -67,10 +32,16 @@ function bounceFromBall(balls: Ball[]): { bounce: boolean, distance: number, new
                 obj2.setCollision(true);
 
                 let vCollision = {x: obj2.x - obj1.x, y: -obj2.y - (-obj1.y)};
-                let distance = Math.sqrt((obj2.x-obj1.x)*(obj2.x-obj1.x) + (-obj2.y-(-obj1.y))*(-obj2.y-(-obj1.y)));
                 let vCollisionNorm = {x: vCollision.x / distance, y: vCollision.y / distance};
                 let vRelativeVelocity = {x: obj1.speedVector.x - obj2.speedVector.x, y: obj1.speedVector.y - obj2.speedVector.y};
                 let speed = vRelativeVelocity.x * vCollisionNorm.x + vRelativeVelocity.y * vCollisionNorm.y;
+                speed *= settings.friction;
+                obj1.x -= vCollisionNorm.x;
+                obj1.y += vCollisionNorm.y;
+
+                obj2.x += vCollisionNorm.x;
+                obj2.y -= vCollisionNorm.y;
+                debugger;
 
                 if (speed < 0) {
                     continue;
@@ -80,186 +51,81 @@ function bounceFromBall(balls: Ball[]): { bounce: boolean, distance: number, new
                 // let impulse = 1;
                 obj1.setSpeedVector(new Victor(obj1.speedVector.x - (impulse * obj2.mass * vCollisionNorm.x), obj1.speedVector.y - (impulse * obj2.mass * vCollisionNorm.y)));
                 obj2.setSpeedVector(new Victor(obj2.speedVector.x + (impulse * obj1.mass * vCollisionNorm.x), obj2.speedVector.y + (impulse * obj1.mass * vCollisionNorm.y)));
-
-                // obj1.vx -= (impulse * obj2.mass * vCollisionNorm.x);
-                // obj1.vy -= (impulse * obj2.mass * vCollisionNorm.y);
-                // obj2.vx += (impulse * obj1.mass * vCollisionNorm.x);
-                // obj2.vy += (impulse * obj1.mass * vCollisionNorm.y);
             }
         }
     }
-
-    let bounce: boolean = false;
-    let distance: number = 0;
-    let newVector: Victor = new Victor(0, 0);
-    // if (ball.id !== 1) return { bounce, distance, newVector };
-    balls.forEach(otherBall => {
-        // if (ball.id === otherBall.id) return;
-        // const vectorBall = new Victor(ball.x, ball.y);
-        // const vectorOtherBall = new Victor(otherBall.x, otherBall.y);
-        // distance = vectorBall.distance(vectorOtherBall);
-        // bounce = distance <= ball.radius + otherBall.radius + 1;
-        if (bounce) {
-
-            // const vCollision = new Victor(otherBall.x - ball.x, otherBall.y - ball.y);
-            // const vCollisionNorm = new Victor(vCollision.x / distance, vCollision.y / distance);
-            // const vRelativeVelocity = new Victor(ball.speedVector.x - otherBall.speedVector.x, ball.speedVector.y - otherBall.speedVector.y);
-            // let speed = vRelativeVelocity.x * vCollisionNorm.x + vRelativeVelocity.y * vCollisionNorm.y;
-            // newVector = new Victor(Math.abs(otherBall.x - ball.x), Math.abs(otherBall.y - ball.y));
-            //
-            // ball.speedVector = new Victor(ball.speedVector.x - speed * vCollisionNorm.x, ball.speedVector.y + speed * vCollisionNorm.y);
-            // otherBall.speedVector = new Victor(otherBall.speedVector.x - speed * vCollisionNorm.x, otherBall.speedVector.y + speed * vCollisionNorm.y)
-            // // newVector = ball.speedVector
-            // //     .clone()
-            // //     .add(new Victor(Math.abs(ball.x - otherBall.x), Math.abs(ball.y - otherBall.y)).rotateDeg(-90));
-            //
-            // debugger;
-            // // @ts-ignore
-            // // window.nope = true;
-        }
-    });
-    return { bounce, distance, newVector: newVector };
 }
 
-function bouncesFromBoard (circle: Ball, rect: { w: number; h: number; x: number; y: number; }, ): { bounce: boolean, x: number, y: number} {
-    // compute a center-to-center vector
-    const half = { x: rect.w/2, y: rect.h/2 };
-    const center = {
-        x: circle.x - (rect.x+half.x),
-        y: circle.y - (rect.y+half.y)};
-
-    // check circle position inside the rectangle quadrant
-    const side = {
-        x: Math.abs (center.x) - half.x,
-        y: Math.abs (center.y) - half.y};
-    if (side.x >  circle.radius || side.y >  circle.radius) // outside
-        return { bounce: false, x: 0, y: 0 };
-    if (side.x < -circle.radius && side.y < -circle.radius) // inside
-        return { bounce: false, x: 0, y: 0 };
-    if (side.x < 0 || side.y < 0) // intersects side or corner
+function detectEdgeCollisions(balls: Ball[], board: { w: number; h: number; x?: number; y?: number; }) {
+    let obj;
+    for (let i = 0; i < balls.length; i++)
     {
-        let dx = 0, dy = 0;
-        if (Math.abs (side.x) < circle.radius && side.y < 0)
-        {
-            dx = center.x*side.x < 0 ? -1 : 1;
-        }
-        else if (Math.abs (side.y) < circle.radius && side.x < 0)
-        {
-            dy = center.y*side.y < 0 ? -1 : 1;
+        obj = balls[i];
+
+        // Check for left and right
+        if (obj.x < obj.radius){
+            obj.speedVector.x = Math.abs(obj.speedVector.x) * settings.friction;
+            obj.x = obj.radius;
+        }else if (obj.x > board.w - obj.radius){
+            obj.speedVector.x = -Math.abs(obj.speedVector.x) * settings.friction;
+            obj.x = board.w - obj.radius;
         }
 
-        return { bounce: true, x:dx, y:dy };
+        // Check for bottom and top
+        if (obj.y < obj.radius){
+            obj.speedVector.y = -(Math.abs(obj.speedVector.y) * settings.friction);
+            obj.y = obj.radius;
+        } else if (obj.y > board.h - obj.radius){
+            obj.speedVector.y = -(-Math.abs(obj.speedVector.y) * settings.friction);
+            obj.y = board.h - obj.radius;
+        }
     }
-    // circle is near the corner
-    let bounce = side.x * side.x + side.y * side.y  < circle.radius * circle.radius;
-    if (!bounce) return { bounce:false, x: 0, y: 0 };
-    const norm = Math.sqrt (side.x*side.x+side.y*side.y);
-    const dx = center.x < 0 ? -1 : 1;
-    const dy = center.y < 0 ? -1 : 1;
-    return { bounce:true, x: dx*side.x/norm, y: dy*side.y/norm };
 }
 
 function App() {
-    let info = '';
     let nope = false;
+
+    const [info, setInfo] = useState<string>('');
+    const [showCanvas, setShowCanvas] = useState<boolean>(false);
+    const [ballsAmount, setBallsAmount] = useState<number>(30);
 
     const balls: Ball[] = [];
 
-    const draw = (ctx: Context, frameCount: number) => {
+    const draw = (ctx: Context, frameCount: number, secondsPassed: number) => {
         if (!balls.length) {
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < ballsAmount; i++) {
                 balls.push(new Ball(
                     ctx,
-                    +Math.random().toFixed(2) * 100 + 40,
-                    +Math.random().toFixed(2) * 100 + 40,
-                    +Math.random().toFixed(2) * 100,
-                    +Math.random().toFixed(2) * 100
-                ).setPreferences(settings.ball.radius));
+                    +Math.random().toFixed(2) * 100 + 200,
+                    +Math.random().toFixed(2) * 100 + 200,
+                    settings.ball.speed * (+Math.random().toFixed(2)) * (i % 2 ? 1 : -1),
+                    settings.ball.speed * (+Math.random().toFixed(2)) * (i % 2 ? 1 : -1),
+                ).setPreferences(settings.ball.radius)
+                .useColoredCollision(true));
             }
-            // balls.push(...[
-            //     new Ball(ctx, 150, 250, 100, 100).setPreferences(settings.ball.radius * 3, 'green'),
-            //     new Ball(ctx, 202, 44, 10, -160).setPreferences(settings.ball.radius, 'blue'),
-            //     new Ball(ctx, 123, 124, -100, -100).setPreferences(settings.ball.radius, 'yellow'),
-            //     new Ball(ctx, 150, 150, -200, 10).setPreferences(settings.ball.radius * 2, 'pink'),
-            // ]);
+            balls.push(...[
+                // new Ball(ctx, 350, 350, -200, 2000).setPreferences(settings.ball.radius * 4, 'green'),
+                // new Ball(ctx, 200, 200, 200, -200).setPreferences(settings.ball.radius, 'blue'),
+                // new Ball(ctx, 400, 400, -200, 200).setPreferences(settings.ball.radius, 'yellow'),
+                // new Ball(ctx, 350, 350, -200, 10).setPreferences(settings.ball.radius * 2, 'pink'),
+            ]);
         }
+
         // @ts-ignore
         if (nope || window.nope) return;
-        // clock(ctx);
-        // return;
-        // const animationSpeed = frameCount * 1.5;
 
-        const board = {w: ctx.canvas.width - 300, h: ctx.canvas.height - 300, x: 0, y: 0};
+        const board = {w: ctx.canvas.width, h: ctx.canvas.height, x: 0, y: 0};
 
         balls.forEach(ball => {
-            ball.updatePosition();
+            ball.updatePosition(secondsPassed);
         });
 
-        bounceFromBall(balls);
+        detectCollision(balls);
 
-        balls.forEach(ball => {
-            const boardBounce = bouncesFromBoard(ball, board);
-            if (boardBounce.bounce) {
-                let deg = 0;
-                if (boardBounce.x !== 0) {
-                    deg = (ball.speedVector.verticalAngleDeg()) * 2;
-                } else if (boardBounce.y !== 0) {
-                    deg = (-ball.speedVector.horizontalAngleDeg()) * 2;
-                }
-                ball.speedVector.rotateDeg(deg);
-            }
-        })
-        // balls.forEach(ball => {
-            // const boardBounce = bouncesFromBoard(ball, board);
-            // const ballBounce = bounceFromBall(ball, balls);
-            // info = ballBounce.bounce.toString() + ' ' + ballBounce.distance.toString();
-            //
-            // if (ball.y + ball.r < board.h - 0.1) {
-            //     ball.speedVector.addY(new Victor(0, settings.gravityVector.y / settings.framesPerSecond));
-            // }
-            //
-            // if (boardBounce.bounce) {
-            //     let deg = 0;
-            //     if (boardBounce.x !== 0) {
-            //         deg = (ball.speedVector.verticalAngleDeg()) * 2;
-            //     } else if (boardBounce.y !== 0) {
-            //         deg = (-ball.speedVector.horizontalAngleDeg()) * 2;
-            //     }
-            //     ball.speedVector.rotateDeg(deg);
-            // }
-            //
-            // const frictionVector = ball.speedVector
-            //     .clone()
-            //     .invert()
-            //     .multiply(new Victor((settings.friction / settings.framesPerSecond), (settings.friction / settings.framesPerSecond)));
-            //
-            // ball.speedVector.add(frictionVector);
-            // if ((ball.speedVector.x < 0.1 && ball.speedVector.x > 0) || (ball.speedVector.x > -0.1 && ball.speedVector.x < 0)) {
-            //     ball.speedVector.multiplyX(new Victor(0, 0));
-            // }
-            // if ((ball.speedVector.y < 0.1 && ball.speedVector.y > 0) || (ball.speedVector.y > -0.1 && ball.speedVector.y < 0)) {
-            //     ball.speedVector.multiplyY(new Victor(0, 0));
-            // }
-        // });
-
-        // info = balls.every(b => b.speedVector.x === 0 && b.speedVector.y === 0) ? 'done' : 'moving';
-
-        // debugger;
-        // if (bounces(board, {...ball, x: newX + dir}).bounce) {
-        //     dir *= -1;
-        // }
-        // newX += dir;
-
-        // if (b.bounce) {
-        //     newX = oldX;
-        //     ball.x = oldX || 0;
-        // } else {
-        //     oldX = ball.x;
-        // }
-        // animationSpeed % (300 - 100) + 50
+        detectEdgeCollisions(balls, board);
 
         ctx.save();
-        ctx.clearRect(board.x, board.y, board.w + 300, board.h + 300);
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.fillStyle = '#00000055';
         ctx.beginPath();
         // ctx.arc(50, 100, 20 * Math.sin(frameCount * 0.05) ** 2, 0, 2 * Math.PI)
@@ -268,33 +134,16 @@ function App() {
         // ctx.closePath()
 
         for (const ball of balls) {
-            ctx.fillStyle = ball.color;
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, ball.radius, ball.s, ball.e);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(ball.x, ball.y);
-            ctx.lineTo(ball.x + ball.speedVector.x, ball.y + (-ball.speedVector.y));
-            ctx.stroke();
+            if (ball.isHidden) {
+                continue;
+            }
+            ball.draw(true);
         }
 
         ctx.fillStyle = 'green'
         ctx.font = "30px Arial";
-        ctx.fillText(info, 10, 400);
-
+        ctx.fillText('txt', 10, 400);
         ctx.restore();
-
-        // ctx.closePath()
-
-        // ctx.beginPath();
-        // ctx.arc(75,75,50,0,Math.PI*2,true); // Outer circle
-        // ctx.moveTo(110,75);
-        // ctx.arc(75,75,35,0,Math.PI,false);  // Mouth (clockwise)
-        // ctx.moveTo(65,65);
-        // ctx.arc(60,65,5,0,Math.PI*2,true);  // Left eye
-        // ctx.moveTo(95,65);
-        // ctx.arc(90,65,5,0,Math.PI*2,true);  // Right eye
-        // ctx.stroke();
     }
 
     // document.addEventListener('keydown', (event: any) => {
@@ -317,12 +166,20 @@ function App() {
         window.nope = !window.nope;
     }
 
+    // setTimeout(() => {
+    //     setInfo(info === 'done' ? 'srone' : 'done');
+    // }, 1000)
+
     return (
         <div className="App">
             <div>
-                <Canvas draw={draw} width={600} height={600} />
+                {showCanvas && <Canvas key={'cc'} draw={draw} width={settings.gameField.width} height={settings.gameField.height}/>}
             </div>
             <button onClick={onNope}>nope</button>
+            {info}
+            {!showCanvas && <button onClick={() => setShowCanvas(true)}>Start</button>}
+            {showCanvas && <button onClick={() => setShowCanvas(false)}>Reset</button>}
+            {!showCanvas && <input value={ballsAmount} onChange={e => setBallsAmount(+e.target.value)} />}
         </div>
     );
 }

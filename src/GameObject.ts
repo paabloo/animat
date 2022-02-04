@@ -10,6 +10,7 @@ export class GameObject {
     speedVector: Victor;
     mass: number;
     isColliding: boolean;
+    isHidden = false;
 
     constructor(context: CanvasRenderingContext2D, x: number, y: number, vx: number, vy: number, mass = 1) {
         this.id = uuidv4();
@@ -24,19 +25,37 @@ export class GameObject {
         return this;
     }
 
+    draw(drawSpeedVector?: boolean): this {
+        if (drawSpeedVector) {
+            this.context.beginPath();
+            this.context.moveTo(this.x, this.y);
+            this.context.lineTo((this.x + this.speedVector.x / 4), this.y + (-this.speedVector.y / 4));
+            this.context.stroke();
+        }
+        return this;
+    }
+
     setSpeedVector(speedVector: Victor): this {
         this.speedVector = speedVector;
         return this;
     }
 
-    updatePosition(): this {
-        this.x += this.speedVector.x / settings.framesPerSecond;
-        this.y += (-this.speedVector.y) / settings.framesPerSecond;
+    updatePosition(secondsPassed: number): this {
+        this.speedVector.y -= settings.gravity * secondsPassed;
+
+        this.x += this.speedVector.x * secondsPassed;
+        this.y += (-this.speedVector.y) * secondsPassed;
+
         return this;
     }
 
     setCollision(collision: boolean): this {
         this.isColliding = collision;
+        return this;
+    }
+
+    setHidden(hidden: boolean): this {
+        this.isHidden = hidden;
         return this;
     }
 }

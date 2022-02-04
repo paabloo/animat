@@ -4,6 +4,7 @@ const Canvas = (props: { [x: string]: any; draw: any }) => {
 
     const { draw, ...rest } = props
     const canvasRef = useRef(null)
+    const oldTimeStamp = useRef<number>(-1);
 
     useEffect(() => {
 
@@ -13,12 +14,17 @@ const Canvas = (props: { [x: string]: any; draw: any }) => {
         let frameCount = 0
         let animationFrameId: number;
 
-        const render = () => {
+        const render = (timestamp: number) => {
+            if (oldTimeStamp.current === -1) {
+                oldTimeStamp.current = timestamp;
+            }
+            const secondsPassed = (timestamp - oldTimeStamp.current) / 1000;
+            oldTimeStamp.current = timestamp;
             frameCount++;
-            draw(context, frameCount)
-            animationFrameId = window.requestAnimationFrame(render);
+            draw(context, frameCount, secondsPassed)
+            animationFrameId = window.requestAnimationFrame(ts => render(ts));
         }
-        render();
+        render(oldTimeStamp.current);
 
         return () => {
             window.cancelAnimationFrame(animationFrameId);
