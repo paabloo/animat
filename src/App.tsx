@@ -3,23 +3,23 @@ import Victor from 'victor';
 import './App.css';
 import settings from './settings';
 import Board from "./Board/Board";
+import Info from "./Info";
 
 console.log(settings);
 // @ts-ignore
 window.v = Victor;
 
 function App() {
-    const info = useRef<number>(0);
-    // const [info, setInfo] = useState<number>(0);
+    // const info = useRef<number>(0);
+    const [info, setInfo] = useState<number>(0);
 
-    const add = () => {
-        info.current += 1;
-        // console.log(info)
+    const add = (e: number) => {
+        // setInfo(info + e);
     }
 
     return (
         <div className="App">
-            {info.current}
+            <Info key={'info'} info={info} />
             <br />
             <Board key={'board'} setInfo={add} />
         </div>

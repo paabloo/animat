@@ -21,7 +21,7 @@ function hideObjects(ball1: Ball, ball2: Ball): void {
     }
 }
 
-function detectCollision(balls: Ball[], forwardCollision: () => void): void {
+function detectCollision(balls: Ball[], forwardCollision: (e: number) => void, info: any): void {
     balls.forEach(ball => ball.setCollision(false));
 
     let obj1;
@@ -41,7 +41,8 @@ function detectCollision(balls: Ball[], forwardCollision: () => void): void {
             let bounce = distance <= obj1.radius + obj2.radius;
 
             if (bounce) {
-                forwardCollision();
+                forwardCollision(1);
+                info.current++;
                 obj1.setCollision(true, obj2);
                 obj2.setCollision(true, obj1);
                 hideObjects(obj1, obj2);
@@ -50,7 +51,7 @@ function detectCollision(balls: Ball[], forwardCollision: () => void): void {
                 let vCollisionNorm = {x: vCollision.x / distance, y: vCollision.y / distance};
                 let vRelativeVelocity = {x: obj1.speedVector.x - obj2.speedVector.x, y: obj1.speedVector.y - obj2.speedVector.y};
                 let speed = vRelativeVelocity.x * vCollisionNorm.x + vRelativeVelocity.y * vCollisionNorm.y;
-                speed *= settings.friction;
+                speed *= settings.bounceFriction;
 
                 obj1.setPosition(obj1.x - vCollisionNorm.x, obj1.y + vCollisionNorm.y);
                 obj2.setPosition(obj2.x + vCollisionNorm.x, obj2.y - vCollisionNorm.y);
@@ -76,19 +77,19 @@ function detectEdgeCollisions(balls: Ball[], board: { w: number; h: number; x?: 
 
         // Check for left and right
         if (obj.x < obj.radius){
-            obj.speedVector.x = Math.abs(obj.speedVector.x) * settings.friction;
+            obj.speedVector.x = Math.abs(obj.speedVector.x) * settings.bounceFriction;
             obj.x = obj.radius;
         }else if (obj.x > board.w - obj.radius){
-            obj.speedVector.x = -Math.abs(obj.speedVector.x) * settings.friction;
+            obj.speedVector.x = -Math.abs(obj.speedVector.x) * settings.bounceFriction;
             obj.x = board.w - obj.radius;
         }
 
         // Check for bottom and top
         if (obj.y < obj.radius){
-            obj.speedVector.y = -(Math.abs(obj.speedVector.y) * settings.friction);
+            obj.speedVector.y = -(Math.abs(obj.speedVector.y) * settings.bounceFriction);
             obj.y = obj.radius;
         } else if (obj.y > board.h - obj.radius){
-            obj.speedVector.y = -(-Math.abs(obj.speedVector.y) * settings.friction);
+            obj.speedVector.y = -(-Math.abs(obj.speedVector.y) * settings.bounceFriction);
             obj.y = board.h - obj.radius;
         }
     }
@@ -113,8 +114,8 @@ function Board(props) {
 
     const { setInfo } = props;
 
-    // const [info, setInternalInfo] = useState<string>('');
-    const info = useRef<string>('');
+    const [_info, setInternalInfo] = useState<string>('');
+    const info = useRef<number>(0);
     const keys = useRef<{ArrowLeft: boolean; ArrowUp: boolean; ArrowRight: boolean; ArrowDown: boolean}>({
         ArrowUp: false,
         ArrowLeft: false,
@@ -127,12 +128,12 @@ function Board(props) {
     const [showCanvas, setShowCanvas] = useState<boolean>(false);
     const [ballsAmount, setBallsAmount] = useState<number>(30);
 
-    const balls: Ball[] = [];
+    const balls = useRef<Ball[]>([]);
 
     const draw = (ctx: Context, frameCount: number, secondsPassed: number) => {
-        if (!balls.length) {
+        if (!balls.current.length) {
             for (let i = 0; i < ballsAmount; i++) {
-                balls.push(new Ball(
+                balls.current.push(new Ball(
                     ctx,
                     +Math.random().toFixed(2) * 100 + 200,
                     +Math.random().toFixed(2) * 100 + 200,
@@ -142,7 +143,7 @@ function Board(props) {
                     .useColoredCollision(false));
             }
             for (let i = 0; i < ballsAmount; i++) {
-                balls.push(new Ball(
+                balls.current.push(new Ball(
                     ctx,
                     +Math.random().toFixed(2) * 100 + 400,
                     +Math.random().toFixed(2) * 100 + 200,
@@ -152,7 +153,7 @@ function Board(props) {
                     .useColoredCollision(false));
             }
             for (let i = 0; i < ballsAmount; i++) {
-                balls.push(new Ball(
+                balls.current.push(new Ball(
                     ctx,
                     +Math.random().toFixed(2) * 100 + 400,
                     +Math.random().toFixed(2) * 100 + 400,
@@ -161,7 +162,7 @@ function Board(props) {
                 ).setPreferences(settings.ball.radius, 'green')
                     .useColoredCollision(false));
             }
-            balls.push(...[
+            balls.current.push(...[
                 playerBall.addContext(ctx).setPlayer()
                 // new Ball(ctx, 350, 350, -2000, 2000).setPreferences(settings.ball.radius * 10, 'green'),
                 // new Ball(ctx, 350, 250, -2000, 2000).setPreferences(settings.ball.radius * 10, 'green'),
@@ -177,15 +178,15 @@ function Board(props) {
 
         const board = {w: ctx.canvas.width, h: ctx.canvas.height, x: 0, y: 0};
 
-        balls.forEach(ball => {
+        balls.current.forEach(ball => {
             ball.updatePosition(secondsPassed);
         });
 
-        detectCollision(balls, setInfo);
+        detectCollision(balls.current, setInfo, info);
 
-        detectEdgeCollisions(balls, board);
+        detectEdgeCollisions(balls.current, board);
 
-        checkEnd(balls);
+        checkEnd(balls.current);
 
         ctx.save();
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -196,16 +197,17 @@ function Board(props) {
         ctx.fill();
         // ctx.closePath()
 
-        for (const ball of balls) {
+        for (const ball of balls.current) {
             if (ball.isHidden) {
                 continue;
             }
-            ball.draw(true);
+            ball.draw();
         }
 
         ctx.fillStyle = 'green'
         ctx.font = "30px Arial";
-        ctx.fillText(JSON.stringify(keys.current), 10, 400);
+        // ctx.fillText(JSON.stringify(keys.current), 10, 400);
+        // ctx.fillText(info.current.toString(), 10, 400);
         ctx.restore();
     }
 
@@ -238,10 +240,6 @@ function Board(props) {
         window.nope = !window.nope;
     }
 
-    // setTimeout(() => {
-    //     setInfo(info === 'done' ? 'srone' : 'done');
-    // }, 1000)
-
     return (
         <div className="Board">
             <div>
@@ -249,6 +247,8 @@ function Board(props) {
             </div>
             <button onClick={onNope}>nope</button>
             {/*{JSON.stringify(keys.current)}*/}
+            {info.current}
+            {_info}
             {!showCanvas && <button onClick={() => setShowCanvas(true)}>Start</button>}
             {showCanvas && <button onClick={() => setShowCanvas(false)}>Reset</button>}
             {!showCanvas && <input value={ballsAmount} onChange={e => setBallsAmount(+e.target.value)} />}

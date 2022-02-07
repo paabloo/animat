@@ -75,9 +75,16 @@ export class GameObject {
         if (!this.isPlayer) {
             this.speedVector.y -= settings.gravity * secondsPassed;
         }
-
         this.x += this.speedVector.x * secondsPassed;
         this.y += (-this.speedVector.y) * secondsPassed;
+
+        if (!this.isPlayer) {
+            const change = settings.staticFriction * secondsPassed
+
+            this.speedVector.x -= this.speedVector.x * change;
+
+            this.speedVector.y -= this.speedVector.y * change;
+        }
 
         return this;
     }
