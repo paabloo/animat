@@ -34,4 +34,4 @@ const Canvas = (props: { [x: string]: any; draw: any }) => {
     return <canvas ref={canvasRef} {...rest} style={{ height: rest.height, width: rest.width }} />
 }
 
-export default Canvas
+export default React.memo(Canvas);

@@ -1,4 +1,4 @@
-import { GameObject } from './GameObject';
+import { GameObject } from '../GameObject';
 
 export class Ball extends GameObject {
     radius: number = 10;
@@ -10,10 +10,16 @@ export class Ball extends GameObject {
     e = Math.PI * 2;
 
     draw(drawSpeedVector?: boolean): this {
-        this.context.fillStyle = this.color;
-        this.context.beginPath();
-        this.context.arc(this.x, this.y, this.radius, this.s, this.e);
-        this.context.fill();
+        const ctx = this.context as CanvasRenderingContext2D;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, this.s, this.e);
+        ctx.fill();
+        if (this.isPlayer) {
+            ctx.fillStyle = 'green'
+            ctx.font = "12px Arial";
+            ctx.fillText(`${this.speedVector.x.toFixed(1)}, ${this.speedVector.y.toFixed(1)}`, this.x - this.radius, this.y);
+        }
         return super.draw(drawSpeedVector);
     }
 
@@ -33,10 +39,10 @@ export class Ball extends GameObject {
         return this;
     }
 
-    setCollision(collision: boolean): this {
+    setCollision(collision: boolean, collidingWith?: GameObject | Ball): this {
         if (this._useColoredCollision) {
             this.color = collision ? this._collisionColor : this._initColor;
         }
-        return super.setCollision(collision);
+        return super.setCollision(collision, collidingWith);
     }
 }
